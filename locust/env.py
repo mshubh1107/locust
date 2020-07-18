@@ -7,6 +7,7 @@ from .user import User
 from .user.task import filter_tasks_by_tags
 from .shape import LoadTestShape
 from typing import List
+import os
 
 
 class Environment:
@@ -31,17 +32,23 @@ class Environment:
     stats: RequestStats = None
     """Reference to RequestStats instance"""
 
-    runner: Runner = None
+    runner = None
     """Reference to the :class:`Runner <locust.runners.Runner>` instance"""
 
-    web_ui: WebUI = None
+    web_ui = None
     """Reference to the WebUI instance"""
 
-    host: str = None
+    host = None
     """Base URL of the target system"""
+
+    slack_token = None
+    """Slack token of the configured service"""
 
     reset_stats = False
     """Determines if stats should be reset once all simulated users have been spawned"""
+
+    step_load = False
+    """Determines if we're running in step load mode"""
 
     stop_timeout = None
     """
@@ -76,12 +83,16 @@ class Environment:
         stop_timeout=None,
         catch_exceptions=True,
         parsed_options=None,
+        step_load=False
     ):
         if events:
             self.events = events
         else:
             self.events = Events()
-
+        try:
+            self.slack_token = os.environ['SLACK_TOKEN']
+        except:
+            print("Unable to load slack token")
         self.user_classes = user_classes
         self.shape_class = shape_class
         self.tags = tags
