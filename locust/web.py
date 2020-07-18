@@ -25,6 +25,7 @@ from .stats import StatsCSV
 from .util.cache import memoize
 from .util.rounding import proper_round
 from .util.timespan import parse_timespan
+from .util.service import get_service_name
 
 
 logger = logging.getLogger(__name__)
@@ -137,10 +138,11 @@ class WebUI:
             assert request.method == "POST"
             user_count = int(request.form["user_count"])
             spawn_rate = float(request.form["spawn_rate"])
-
-            if request.form.get("host"):
-                # Replace < > to guard against XSS
-                environment.host = str(request.form["host"]).replace("<", "").replace(">", "")
+            # not allowing services to override host
+            # making the change so that people don't test random service and env
+            # if request.form.get("host"):
+            #     # Replace < > to guard against XSS
+            #     environment.host = str(request.form["host"]).replace("<", "").replace(">", "")
 
             if environment.shape_class:
                 environment.runner.start_shape()
@@ -152,6 +154,7 @@ class WebUI:
             return jsonify({"success": True, "message": "Swarming started", "host": environment.host})
 
         @app.route("/stop")
+
         @self.auth_required_if_enabled
         def stop():
             environment.runner.stop()
@@ -253,7 +256,8 @@ class WebUI:
             data = StringIO()
             writer = csv.writer(data)
             self.stats_csv_writer.requests_csv(writer)
-            return _download_csv_response(data.getvalue(), "requests")
+            file_name_prefix = get_service_name(environment.host)+"requests_{0}".format(time())
+            return _download_csv_response(data.getvalue(), file_name_prefix)
 
         @app.route("/stats/requests_full_history/csv")
         @self.auth_required_if_enabled
@@ -279,7 +283,8 @@ class WebUI:
             data = StringIO()
             writer = csv.writer(data)
             self.stats_csv_writer.failures_csv(writer)
-            return _download_csv_response(data.getvalue(), "failures")
+            file_name_prefix = get_service_name(environment.host) + "failures_{0}".format(time())
+            return _download_csv_response(data.getvalue(), file_name_prefix)
 
         @app.route("/stats/requests")
         @self.auth_required_if_enabled
@@ -375,8 +380,8 @@ class WebUI:
             for exc in environment.runner.exceptions.values():
                 nodes = ", ".join(exc["nodes"])
                 writer.writerow([exc["count"], exc["msg"], exc["traceback"], nodes])
-
-            return _download_csv_response(data.getvalue(), "exceptions")
+            file_name_prefix = get_service_name(environment.host)+"exceptions_{0}".format(time())
+            return _download_csv_response(data.getvalue(), file_name_prefix)
 
     def start(self):
         self.greenlet = gevent.spawn(self.start_server)
