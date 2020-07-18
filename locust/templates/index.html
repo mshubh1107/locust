@@ -127,7 +127,7 @@
                     <li><a href="#">Exceptions</a></li>
                     <li><a href="#">Download Data</a></li>
                     {% if is_distributed %}
-                    <li><a href="#">Workers</a></li>
+                    <li><a href="#workers-tab">Workers</a></li>
                     {% endif %}
                     {% block extended_tabs %}
                     {% endblock extended_tabs %}
@@ -194,7 +194,7 @@
                     </div>
                 </div>
                 {% if is_distributed %}
-                <div style="display:none;">
+                <div id=workers-tab" style="display:none;">
                     <table id="workers">
                         <thead>
                             <tr>
