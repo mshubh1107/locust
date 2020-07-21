@@ -6,9 +6,9 @@ import textwrap
 import configargparse
 
 import locust
+import mmap
 
 version = locust.__version__
-
 
 DEFAULT_CONFIG_FILES = ["~/.locust.conf", "locust.conf"]
 
@@ -68,7 +68,6 @@ def get_empty_argument_parser(add_help=True, default_config_files=DEFAULT_CONFIG
 
         """
         ),
-        # epilog="",
     )
     parser.add_argument(
         "-f",
@@ -119,6 +118,14 @@ def parse_locustfile_option(args=None):
         sys.stderr.write("The locustfile must not be named `locust.py`. Please rename the file and try again.\n")
         sys.exit(1)
 
+    # added check for enforcing people not to use svc-hacks urls
+    # this would prevent users do test prod env from dev infra as well
+    if locustfile:
+        with open(locustfile, 'rb', 0) as file, \
+                mmap.mmap(file.fileno(), 0, access=mmap.ACCESS_READ) as s:
+            if s.find(b'svc-hack.') != -1:
+                sys.stderr.write("You cannot use svc-hack urls for load testing.\n")
+            sys.exit(1)
     return locustfile
 
 
@@ -260,9 +267,9 @@ def setup_parser_arguments(parser):
 
     worker_group = parser.add_argument_group(
         "Worker options",
-        textwrap.dedent(
-            """
-            Options for running a Locust Worker node when running Locust distributed.
+
+        textwrap.dedent("""
+            Options for running a Locust Worker node when running Locust distributed. 
             Only the LOCUSTFILE (-f option) need to be specified when starting a Worker, since other options such as -u, -r, -t are specified on the Master node.
         """
         ),
@@ -339,9 +346,9 @@ def setup_parser_arguments(parser):
         env_var="LOCUST_PRINT_STATS",
     )
     stats_group.add_argument(
-        "--only-summary",
-        action="store_true",
-        help="Only print the summary stats",
+        '--only-summary',
+        action='store_true',
+        help='Only print the summary stats',
         env_var="LOCUST_ONLY_SUMMARY",
     )
     stats_group.add_argument(
