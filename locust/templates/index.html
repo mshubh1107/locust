@@ -62,6 +62,8 @@
                     <input type="text" name="user_count" id="user_count" class="val" value="{{ num_users or "" }}"/><br>
                     <label for="hatch_rate">Hatch rate <span style="color:#8a8a8a;">(users spawned/second)</span></label>
                     <input type="text" name="hatch_rate" id="hatch_rate" class="val" value="{{ hatch_rate or "" }}"/><br>
+                    <label for="slack_channel">Channel you want to share report</label>
+                    <input type="text" name="slack_channel" id="slack_channel" class="val" value="{{ slack_channel or "#udaan-locust-reports" }}"/><br>
                     <label for="host">
                         Host <span style="color:#8a8a8a;">(This has to be configured during your build in Jenkinsfile)</span>
                         {% if override_host_warning %}
@@ -74,6 +76,7 @@
                     <input type="text" name="step_user_count" id="step_user_count" class="val" value="{{ step_users or "" }}"/><br>
                     <label for="step_duration">Step duration <span style="color:#8a8a8a;">(300s, 20m, 3h, 1h30m, etc.)</span></label>
                     <input type="text" name="step_duration" id="step_duration" class="val" value="{{ step_time or "" }}"/><br>
+
                     {% endif %}
                     <button type="submit">Start swarming</button>
                 </form>
@@ -170,7 +173,8 @@
                     <div style="margin-top:20px;">
                         <a href="./stats/requests/csv">Download request statistics CSV</a><br>
                         <a href="./stats/failures/csv">Download failures CSV</a><br>
-                        <a href="./exceptions/csv">Download exceptions CSV</a>
+                        <a href="./exceptions/csv">Download exceptions CSV</a><br>
+                        <a href="./slack/send">Post to Slack</a>
                     </div>
                 </div>
                 <div id=workers-tab" style="display:none;">
