@@ -38,6 +38,9 @@ class Environment:
     slack_token = None
     """Slack token of the configured service"""
 
+    slack_channel = None
+    """Slack token of the configured service"""
+
     reset_stats = False
     """Determines if stats should be reset once all simulated users have been spawned"""
 

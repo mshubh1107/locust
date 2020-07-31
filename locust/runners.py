@@ -54,6 +54,7 @@ class Runner(object):
         self.greenlet.spawn(self.monitor_cpu).link_exception(greenlet_exception_handler)
         self.exceptions = {}
         self.target_user_count = None
+        self.slack_channel= "#udaan-locust-reports"
         
         # set up event listeners for recording requests
         def on_request_success(request_type, name, response_time, response_length, **kwargs):

@@ -12,18 +12,19 @@ slack_channel = "#udaan-locust-reports"
 
 
 # Define this as an async function
-async def send_to_slack(text, file_name, content):
+def send_to_slack(chan,text, file_name, content):
     try:
         # Don't forget to have await as the client returns asyncio.Future
         response = client.files_upload(
-            channels=slack_channel,
+            channels=chan,
             content=content,
-            file_name=file_name,
+            filename=file_name,
+            filetype="csv",
             initial_comment=text
         )
-        assert response["file"]
+        assert "ok"
     except SlackApiError as e:
         # You will get a SlackApiError if "ok" is False
         assert e.response["ok"] is False
         assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found'
-        print(f"Got an error: {e.response['error']}")
+        print("Got an error: {e.response['error']}")

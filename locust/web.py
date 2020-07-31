@@ -19,7 +19,7 @@ from locust import __version__ as version
 from .exception import AuthCredentialsError
 from .runners import MasterRunner
 from .log import greenlet_exception_logger
-from .stats import failures_csv, requests_csv, sort_stats
+from .stats import failures_csv, requests_csv, sort_stats, stats_history_csv
 from .util.cache import memoize
 from .util.rounding import proper_round
 from .util.timespan import parse_timespan
@@ -147,23 +147,52 @@ class WebUI:
             assert request.method == "POST"
             user_count = int(request.form["user_count"])
             hatch_rate = float(request.form["hatch_rate"])
+            slack_channel = request.form["slack_channel"]
+            environment.slack_channel = slack_channel
             # not allowing services to override host
             # making the change so that people don't test random service and env
-            #if (request.form.get("host")):
-               # environment.host = str(request.form["host"])
-
+            # if (request.form.get("host")):
+                #environment.host = str(request.form["host"])
+            self.slack_channel=slack_channel
             if environment.step_load:
                 step_user_count = int(request.form["step_user_count"])
                 step_duration = parse_timespan(str(request.form["step_duration"]))
                 environment.runner.start_stepload(user_count, hatch_rate, step_user_count, step_duration)
                 return jsonify({'success': True, 'message': 'Swarming started in Step Load Mode', 'host': environment.host})
-            
+
             environment.runner.start(user_count, hatch_rate)
             return jsonify({'success': True, 'message': 'Swarming started', 'host': environment.host})
-        
+
+        def request_stats_post():
+            data = StringIO()
+            writer = csv.writer(data)
+            requests_csv(self.environment.runner.stats, writer)
+            send_to_slack(environment.slack_channel,"request stats","request_stats.csv",data.getvalue())
+
+        def failure_post():
+            data = StringIO()
+            writer = csv.writer(data)
+            failures_csv(self.environment.runner.stats, writer)
+            send_to_slack(environment.slack_channel,"failure stats","failure.csv",data.getvalue())
+
+        def exceptions_post():
+            data = StringIO()
+            writer = csv.writer(data)
+            writer.writerow(["Count", "Message", "Traceback", "Nodes"])
+            for exc in environment.runner.exceptions.values():
+                nodes = ", ".join(exc["nodes"])
+                writer.writerow([exc["count"], exc["msg"], exc["traceback"], nodes])
+            send_to_slack(environment.slack_channel,"exceptions stats","exceptions.csv",data.getvalue())
+
+        def all_post():
+            request_stats_post()
+            failure_post()
+            exceptions_post()
+
         @app.route('/stop')
         @self.auth_required_if_enabled
         def stop():
+            all_post()
             environment.runner.stop()
             return jsonify({'success':True, 'message': 'Test stopped'})
         
@@ -198,8 +227,9 @@ class WebUI:
             disposition = "attachment;filename={0}".format(file_name)
             response.headers["Content-type"] = "text/csv"
             response.headers["Content-disposition"] = disposition
+
             return response
-        
+
         @app.route('/stats/requests')
         @self.auth_required_if_enabled
         @memoize(timeout=DEFAULT_CACHE_TIME, dynamic_timeout=True)
@@ -252,7 +282,6 @@ class WebUI:
             
             report["state"] = environment.runner.state
             report["user_count"] = environment.runner.user_count
-        
             return jsonify(report)
         
         @app.route("/exceptions")
@@ -268,7 +297,17 @@ class WebUI:
                     } for row in environment.runner.exceptions.values()
                 ]
             })
-        
+
+        @app.route("/slack/send")
+        @self.auth_required_if_enabled
+        def  sendToSlack():
+            #@TODO:Generic call
+            # report_type = "all"+"_post"
+            # report_type()
+            all_post()
+            response = make_response(jsonify({'success':True, 'message': 'Test Result sent'}))
+            return response
+
         @app.route("/exceptions/csv")
         @self.auth_required_if_enabled
         def exceptions_csv():
@@ -301,6 +340,7 @@ class WebUI:
         """
         Stop the running web server
         """
+
         self.server.stop()
 
     def auth_required_if_enabled(self, view_func):
